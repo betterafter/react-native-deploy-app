@@ -35,8 +35,8 @@
     "updates": {
       "enabled": true,
       "url": "https://example.com/rnd-sandbox-placeholder",
-      "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 60000,
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 0,
       "disableAntiBrickingMeasures": true
     },
     "plugins": [
