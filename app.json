@@ -31,10 +31,13 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "runtimeVersion": "57.0.0",
     "updates": {
-      "enabled": false,
-      "checkAutomatically": "NEVER",
-      "fallbackToCacheTimeout": 0
+      "enabled": true,
+      "url": "https://example.com/rnd-sandbox-placeholder",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 60000,
+      "disableAntiBrickingMeasures": true
     },
     "plugins": [
       "expo-dev-client",
