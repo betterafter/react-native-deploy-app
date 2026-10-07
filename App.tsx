@@ -56,22 +56,16 @@ export default function App() {
     setBusy(true);
     setMessage(`${build.title} 다운로드 중…`);
     try {
-      // Show Toss-style chrome first so it stays visible across the in-process reload.
+      // Keep the native bar, fetch, then ONE official reload.
+      // Do not Activity.recreate / process.exit — that felt like the app dying.
       await sandboxShell.showChrome(build.title);
       Updates.setUpdateURLAndRequestHeadersOverride({
         updateUrl: build.manifestUrl,
         requestHeaders: {},
       });
-      const result = await Updates.fetchUpdateAsync();
-      if (!result.isNew && !result.isRollBackToEmbedded) {
-        // Already have this update locally — still relaunch onto it.
-      }
+      await Updates.fetchUpdateAsync();
       setMessage('실행 중…');
-      if (sandboxShell.available) {
-        await sandboxShell.reloadToFetchedUpdate();
-      } else {
-        await Updates.reloadAsync();
-      }
+      await Updates.reloadAsync();
     } catch (error) {
       await sandboxShell.hideChrome().catch(() => undefined);
       setMessage(
@@ -84,7 +78,8 @@ export default function App() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      await sandboxShell.hideChrome().catch(() => undefined);
+      // Do not hideChrome here — that cleared the bar while a failed reload
+      // left a blank surface. Chrome is cleared only when returning to launcher.
       await refresh();
       if (!active) return;
       const initial = await Linking.getInitialURL();
@@ -102,7 +97,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.kicker}>react-native-deploy</Text>
           <Text style={styles.title}>Sandbox</Text>
