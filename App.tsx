@@ -18,7 +18,7 @@ import {
   type SavedBuild,
   upsertBuild,
 } from './builds';
-import { sandboxShell } from './sandboxShell';
+import { RELOAD_SCREEN, sandboxShell } from './sandboxShell';
 
 export default function App() {
   const [builds, setBuilds] = useState<SavedBuild[]>([]);
@@ -57,15 +57,18 @@ export default function App() {
     setMessage(`${build.title} 다운로드 중…`);
     try {
       // Keep the native bar, fetch, then ONE official reload.
-      // Do not Activity.recreate / process.exit — that felt like the app dying.
+      // Branded reload screen masks the JS remount gap (no white flash).
       await sandboxShell.showChrome(build.title);
+      await sandboxShell.clearDeepLinkIntent().catch(() => undefined);
       Updates.setUpdateURLAndRequestHeadersOverride({
         updateUrl: build.manifestUrl,
         requestHeaders: {},
       });
       await Updates.fetchUpdateAsync();
       setMessage('실행 중…');
-      await Updates.reloadAsync();
+      // Branded reload under chrome; intent already cleared so Expo Router
+      // won't treat rnd-sandbox:// as the experience initial URL.
+      await Updates.reloadAsync({ reloadScreenOptions: RELOAD_SCREEN });
     } catch (error) {
       await sandboxShell.hideChrome().catch(() => undefined);
       setMessage(
