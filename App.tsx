@@ -51,18 +51,26 @@ export default function App() {
       return;
     }
     setBusy(true);
-    setMessage(`${build.title} 불러오는 중…`);
+    setMessage(`${build.title} 다운로드 중…`);
     try {
       Updates.setUpdateURLAndRequestHeadersOverride({
         updateUrl: build.manifestUrl,
         requestHeaders: {},
       });
-      await Updates.fetchUpdateAsync();
-      setMessage('실행 중…');
-      await Updates.reloadAsync();
+      const result = await Updates.fetchUpdateAsync();
+      // reloadAsync() often kills the activity without relaunching on this setup.
+      // Soft-restart via rnd-sandbox://run so the downloaded update actually opens.
+      setMessage(
+        result.isNew
+          ? '다운로드 완료. 앱을 다시 여는 중…'
+          : '준비됨. 앱을 다시 여는 중…',
+      );
+      await Linking.openURL('rnd-sandbox://run');
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : '빌드를 실행하지 못했습니다.',
+        error instanceof Error
+          ? error.message
+          : '빌드를 실행하지 못했습니다. 앱을 완전히 종료한 뒤 다시 열어 보세요.',
       );
       setBusy(false);
     }
