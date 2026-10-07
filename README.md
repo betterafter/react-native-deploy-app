@@ -16,6 +16,6 @@ cd android && ./gradlew assembleRelease
 
 APK는 `android/app/build/outputs/apk/release/`에 생깁니다. iOS는 Xcode에서 `ios/` 아카이브를 내보냅니다.
 
-테스터에게 보여줄 이름으로 파일을 바꾼 뒤 R2에 올립니다. 파일을 `Freecap.apk`로 올리면 콘솔 띠는 Freecap입니다.
+테스터에게 보여줄 이름으로 파일을 바꾼 뒤 R2에 올립니다. 파일을 `MySandBox.apk`로 올리면 콘솔 띠는 MySandBox입니다.
 
 콘솔 연결 방법은 [react-native-deploy README의 샌드박스 앱](https://github.com/betterafter/react-native-deploy#샌드박스-앱)을 보면 됩니다.
