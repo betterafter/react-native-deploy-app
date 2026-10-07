@@ -18,10 +18,13 @@ import {
   type SavedBuild,
   upsertBuild,
 } from './builds';
+import { sandboxShell } from './sandboxShell';
 
 export default function App() {
   const [builds, setBuilds] = useState<SavedBuild[]>([]);
-  const [message, setMessage] = useState('콘솔 QR을 스캔하면 아래에 저장됩니다. 항목을 누르면 실행합니다.');
+  const [message, setMessage] = useState(
+    '콘솔 QR을 스캔하면 아래에 저장됩니다. 항목을 누르면 상단바 아래에서 실행됩니다.',
+  );
   const [busy, setBusy] = useState(false);
   const [booting, setBooting] = useState(true);
 
@@ -53,24 +56,26 @@ export default function App() {
     setBusy(true);
     setMessage(`${build.title} 다운로드 중…`);
     try {
+      // Show Toss-style chrome first so it stays visible across the in-process reload.
+      await sandboxShell.showChrome(build.title);
       Updates.setUpdateURLAndRequestHeadersOverride({
         updateUrl: build.manifestUrl,
         requestHeaders: {},
       });
       const result = await Updates.fetchUpdateAsync();
-      // reloadAsync() often kills the activity without relaunching on this setup.
-      // Soft-restart via rnd-sandbox://run so the downloaded update actually opens.
-      setMessage(
-        result.isNew
-          ? '다운로드 완료. 앱을 다시 여는 중…'
-          : '준비됨. 앱을 다시 여는 중…',
-      );
-      await Linking.openURL('rnd-sandbox://run');
+      if (!result.isNew && !result.isRollBackToEmbedded) {
+        // Already have this update locally — still relaunch onto it.
+      }
+      setMessage('실행 중…');
+      if (sandboxShell.available) {
+        await sandboxShell.reloadToFetchedUpdate();
+      } else {
+        await Updates.reloadAsync();
+      }
     } catch (error) {
+      await sandboxShell.hideChrome().catch(() => undefined);
       setMessage(
-        error instanceof Error
-          ? error.message
-          : '빌드를 실행하지 못했습니다. 앱을 완전히 종료한 뒤 다시 열어 보세요.',
+        error instanceof Error ? error.message : '빌드를 실행하지 못했습니다.',
       );
       setBusy(false);
     }
@@ -79,6 +84,7 @@ export default function App() {
   useEffect(() => {
     let active = true;
     void (async () => {
+      await sandboxShell.hideChrome().catch(() => undefined);
       await refresh();
       if (!active) return;
       const initial = await Linking.getInitialURL();
@@ -96,12 +102,17 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.kicker}>react-native-deploy</Text>
           <Text style={styles.title}>Sandbox</Text>
           <Text style={styles.body}>{message}</Text>
           {busy || booting ? <ActivityIndicator color="#3182f6" style={styles.spinner} /> : null}
+          {!sandboxShell.available ? (
+            <Text style={styles.warn}>
+              이 빌드에는 네이티브 셸이 없습니다. Android에서 다시 빌드해 설치하세요.
+            </Text>
+          ) : null}
         </View>
 
         <FlatList
@@ -213,6 +224,11 @@ const styles = StyleSheet.create({
     color: '#4e5968',
     fontSize: 15,
     lineHeight: 22,
+  },
+  warn: {
+    color: '#f04452',
+    fontSize: 13,
+    lineHeight: 18,
   },
   spinner: {
     alignSelf: 'flex-start',
